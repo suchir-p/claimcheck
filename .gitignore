@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+coverage/
+server/bench-results/
+# CMS files include AMA-copyrighted code descriptions; download them yourself (see README).
+data/
+*.zip
+.DS_Store
