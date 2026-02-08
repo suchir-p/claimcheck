@@ -4,11 +4,13 @@
   "description": "",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import:fees": "tsx src/import/importFeeSchedules.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "mongoose": "^9.1.6"
   },
