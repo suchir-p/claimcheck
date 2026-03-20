@@ -15,7 +15,8 @@
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "mongoose": "^9.1.6",
-    "pdfjs-dist": "^5.5.207"
+    "pdfjs-dist": "^5.5.207",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
