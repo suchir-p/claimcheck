@@ -16,6 +16,7 @@
     "@aws-sdk/client-s3": "^3.1018.0",
     "@aws-sdk/s3-request-presigner": "^3.1018.0",
     "@google/genai": "^1.46.0",
+    "agenda": "^5.0.0",
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "mongoose": "^9.1.6",
