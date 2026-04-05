@@ -1,0 +1,46 @@
+import cookieParser from 'cookie-parser';
+import express, { type ErrorRequestHandler } from 'express';
+import { authRouter, requireAuth } from './auth/auth';
+import { config } from './config';
+import { accountRouter } from './routes/account';
+import { billsRouter } from './routes/bills';
+
+export function createApp() {
+  const app = express();
+  app.set('trust proxy', config.trustProxyHops);
+  app.use(express.json({ limit: '1mb' }));
+  app.use(cookieParser());
+
+  // Minimal CORS for the separately hosted React app (cookies require an exact origin).
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', config.clientOrigin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    next();
+  });
+
+  // CSRF defense. Production cookies are SameSite=None (the React app is on another origin), so a
+  // browser would attach them to a request forged by any website. Browsers always send Origin on
+  // cross-site state-changing requests, so reject any that come from somewhere else. Requests
+  // without Origin (curl, server-to-server) carry no ambient browser cookies to abuse.
+  app.use((req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+    const origin = req.get('origin');
+    if (origin && origin !== config.clientOrigin) return res.status(403).json({ error: 'Cross-site request blocked' });
+    next();
+  });
+
+  app.get('/health', (_req, res) => res.json({ ok: true }));
+  app.use('/auth', authRouter);
+  app.use('/account', requireAuth, accountRouter);
+  app.use('/bills', requireAuth, billsRouter);
+
+  const onError: ErrorRequestHandler = (err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong' });
+  };
+  app.use(onError);
+  return app;
+}
