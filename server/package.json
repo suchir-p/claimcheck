@@ -13,7 +13,8 @@
     "import:fees": "tsx src/import/importFeeSchedules.ts",
     "import:rules": "tsx src/import/importCodingRules.ts",
     "test:unit": "jest --testPathIgnorePatterns integration",
-    "gemini:models": "tsx src/scripts/listGeminiModels.ts"
+    "gemini:models": "tsx src/scripts/listGeminiModels.ts",
+    "bench": "tsx src/bench/index.ts"
   },
   "author": "",
   "license": "ISC",
