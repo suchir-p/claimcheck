@@ -118,17 +118,26 @@ const billSchema = new Schema(
     checksSkipped: [{ _id: false, checkId: String, reason: String }],
     benchmarkMultiplier: Number,
     totals: { billed: Number, billingErrors: Number, pricingConcerns: Number, insuranceIssues: Number },
+
+    letter: {
+      text: String,
+      generatedAt: Date,
+      status: { type: String, enum: ['none', 'drafting', 'ready', 'failed'], default: 'none' },
+      // Set when the findings change after the letter was drafted (an insurance statement added, say).
+      stale: Boolean,
+    },
     error: String,
-    timings: { extractionMs: Number, analysisMs: Number },
+    timings: { extractionMs: Number, analysisMs: Number, letterMs: Number },
     // Optimistic concurrency for background jobs. inputsVersion goes up whenever what the audit
     // reads changes (review answers, insurance statements); an analysis only saves if it's still
-    // current. findingsVersion goes up with each saved analysis.
+    // current. findingsVersion goes up with each saved analysis, so a letter drafted from older
+    // findings is marked stale.
     inputsVersion: { type: Number, default: 0 },
     findingsVersion: { type: Number, default: 0 },
     // When every Gemini model was busy: the time of the next automatic attempt, per step.
-    retryAt: { extract: Date },
+    retryAt: { extract: Date, letter: Date },
     // Which Gemini model handled each step (the first in GEMINI_MODELS that answered).
-    models: { extraction: String },
+    models: { extraction: String, letter: String },
   },
   { timestamps: true, versionKey: false },
 );

@@ -3,7 +3,7 @@
 import { Types } from 'mongoose';
 import request from 'supertest';
 import { createApp } from '../../src/app';
-import { analyzeBill, extractEob } from '../../src/jobs/processors';
+import { analyzeBill, draftLetter, extractEob } from '../../src/jobs/processors';
 import type { LlmProvider } from '../../src/llm/provider';
 import { Bill } from '../../src/models/Bill';
 import { User } from '../../src/models/User';
@@ -71,6 +71,48 @@ describe('analysis', () => {
     expect(saved!.findings).toHaveLength(0);
     expect(saved!.status).toBe('analyzing');
     expect(saved!.findingsVersion ?? 0).toBe(0);
+  });
+
+  it('marks an existing letter out of date when the findings change', async () => {
+    jest.spyOn(referenceData, 'loadReferenceData').mockResolvedValue(emptyRef);
+    const bill = await reviewedBill({ letter: { status: 'ready', text: 'Dear billing office' } });
+    await analyzeBill(bill.id);
+    expect((await Bill.findById(bill.id).lean())!.letter!.stale).toBe(true);
+  });
+});
+
+describe('letter drafting', () => {
+  const finding = {
+    id: 'duplicates-1', checkId: 'duplicates', category: 'billing_error', lineItemIds: ['li-1', 'li-2'], amount: 64,
+    message: 'Code 85025 is billed 2 times.', evidence: { code: '85025', dateOfService: '2026-09-14', occurrences: 2 },
+  };
+  const section = { findingId: 'duplicates-1', explanation: 'Code 85025 is billed twice on September 14, 2026. Please remove the repeated $64.00 charge.' };
+
+  async function draft(onDraft: () => Promise<void> = async () => {}) {
+    const bill = await reviewedBill({ status: 'complete', findings: [finding], letter: { status: 'drafting' } });
+    const llm = {
+      draftLetterSections: jest.fn(async () => {
+        await onDraft();
+        return { data: { sections: [section] }, model: 'fake-model' };
+      }),
+    } as unknown as LlmProvider;
+    await draftLetter(bill.id, llm);
+    return (await Bill.findById(bill.id).lean())!;
+  }
+
+  it('saves a current letter', async () => {
+    const saved = await draft();
+    expect(saved.letter!.status).toBe('ready');
+    expect(saved.letter!.stale).toBe(false);
+    expect(saved.letter!.text).toContain('$64.00');
+  });
+
+  it('marks the letter out of date if a new analysis saved findings while it was being drafted', async () => {
+    const saved = await draft(async () => {
+      await Bill.updateMany({}, { $inc: { findingsVersion: 1 } });
+    });
+    expect(saved.letter!.status).toBe('ready');
+    expect(saved.letter!.stale).toBe(true);
   });
 });
 

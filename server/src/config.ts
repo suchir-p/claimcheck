@@ -34,8 +34,10 @@ export const config = {
     get models() {
       return parseGeminiModels(process.env.GEMINI_MODELS ?? process.env.GEMINI_MODEL);
     },
-    // A request that hasn't answered by then counts as busy and moves to the next model.
+    // A request that hasn't answered by then counts as busy and moves to the next model. Reading a
+    // PDF takes longer than drafting a letter from a few findings, so letters get a shorter limit.
     timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS ?? 90_000),
+    letterTimeoutMs: Number(process.env.GEMINI_LETTER_TIMEOUT_MS ?? 40_000),
   },
   aws: {
     region: process.env.AWS_REGION ?? 'us-east-1',

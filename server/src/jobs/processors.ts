@@ -2,9 +2,12 @@ import type { Job } from 'agenda';
 import { config } from '../config';
 import type { BillForAudit, Finding } from '../domain/types';
 import { totalsReconcile, verifyItem } from '../extraction/verify';
+import { buildLetter, sectionsWithFallback, validateLetterSections } from '../letters/letter';
+import { requiredFacts } from '../letters/sections';
 import { AllModelsBusyError } from '../llm/modelChain';
 import { EobExtractionSchema, ExtractionSchema, type LlmProvider } from '../llm/provider';
 import { Bill } from '../models/Bill';
+import { User } from '../models/User';
 import { classifyBill } from '../rules/classify';
 import { codesNeeded, fullyDisputedLineIds, ncciVersionFor, runAudit } from '../rules/engine';
 import { reconcile, type Eob, type EobLine } from '../rules/reconcile';
@@ -17,6 +20,7 @@ const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [10_000, 40_000];
 // When every Gemini model is overloaded, waiting longer helps more than retrying quickly.
 const BUSY_RETRY_DELAYS_MS = [30_000, 2 * 60_000, 5 * 60_000, 10 * 60_000];
+const LETTER_VALIDATION_ATTEMPTS = 3;
 
 class PermanentError extends Error {}
 
@@ -42,7 +46,9 @@ function withRetries(name: JobName, handler: (billId: string, data: BillJobData)
     const setRetryAt = (at: Date | undefined) => {
       const op = at ? '$set' : '$unset';
       if (name === JOBS.extractEob) return Bill.updateOne({ _id: billId, 'eobs.id': eobId }, { [op]: { 'eobs.$.retryAt': at ?? '' } });
-      if (name === JOBS.extract) return Bill.updateOne({ _id: billId }, { [op]: { 'retryAt.extract': at ?? '' } });
+      if (name === JOBS.extract || name === JOBS.letter) {
+        return Bill.updateOne({ _id: billId }, { [op]: { [`retryAt.${name === JOBS.letter ? 'letter' : 'extract'}`]: at ?? '' } });
+      }
     };
     try {
       await handler(billId, job.attrs.data);
@@ -60,7 +66,8 @@ function withRetries(name: JobName, handler: (billId: string, data: BillJobData)
         return;
       }
       await setRetryAt(undefined);
-      if (name === JOBS.extractEob) {
+      if (name === JOBS.letter) await Bill.updateOne({ _id: billId }, { 'letter.status': 'failed', error: message });
+      else if (name === JOBS.extractEob) {
         // A failed insurance statement shouldn't fail the bill itself.
         await Bill.updateOne(
           { _id: billId, 'eobs.id': eobId },
@@ -267,7 +274,72 @@ export async function analyzeBill(billId: string) {
   );
   if (saved.matchedCount === 0) {
     console.log(`[analyze-bill] bill ${billId}: inputs changed during the audit; leaving it to the newer analysis`);
+    return;
   }
+  // A letter drafted from the old findings no longer matches them.
+  await Bill.updateOne({ _id: billId, 'letter.status': 'ready' }, { $set: { 'letter.stale': true } });
+}
+
+export async function draftLetter(billId: string, llm: LlmProvider) {
+  const bill = await Bill.findById(billId);
+  if (!bill) throw new PermanentError('Bill not found');
+  const started = Date.now();
+  const findingsVersion = bill.findingsVersion;
+  // Only findings from checks that ran; informational notes never go in the letter.
+  const findings = (bill.findings as unknown as Finding[]).filter((f) => f.category !== 'info');
+  if (findings.length === 0) throw new PermanentError('There are no findings to dispute');
+
+  const descriptions = new Map(bill.lineItems.map((l) => [l.id, l.description]));
+  const services = new Map(
+    findings.map((f) => [f.id, [...new Set(f.lineItemIds.map((id) => descriptions.get(id)).filter((d): d is string => !!d))]]),
+  );
+  // Each paragraph must state these facts; telling the model up front saves validation retries.
+  const toModel = findings.map((f) => {
+    const { amounts, codes, phrases, counts } = requiredFacts(f);
+    const mustInclude = [
+      ...codes.map((c) => `code ${c}`),
+      ...amounts.map((a) => `$${a.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+      ...phrases,
+      ...(counts.length ? [`${counts[0]} units billed`, `Medicare's limit of ${counts[1]}`] : []),
+    ];
+    return { ...f, services: services.get(f.id), mustInclude };
+  });
+
+  let feedback: string[] = [];
+  let last: unknown;
+  let model = '';
+  let sections: Parameters<typeof buildLetter>[2] | undefined;
+  for (let i = 0; i < LETTER_VALIDATION_ATTEMPTS && !sections; i++) {
+    const result = await llm.draftLetterSections(toModel, feedback);
+    ({ data: last, model } = result);
+    const validation = validateLetterSections(last, findings);
+    if (validation.ok) sections = validation.sections;
+    else feedback = validation.errors;
+  }
+  if (!sections) {
+    // Never fail the letter over wording: paragraphs the model got wrong come from a template.
+    const fallback = sectionsWithFallback(last, findings, services);
+    console.warn(`[draft-letter] bill ${billId}: template paragraphs for ${fallback.templated.join(', ')} after: ${feedback.join(' ')}`);
+    sections = fallback.sections;
+  }
+
+  const user = await User.findById(bill.userId).select('name');
+  const text = buildLetter(
+    {
+      patientName: user?.name ?? '',
+      providerName: bill.providerName ?? undefined,
+      accountNumber: bill.accountNumber ?? undefined,
+      date: new Date().toLocaleDateString('en-US', { dateStyle: 'long' }),
+    },
+    findings,
+    sections,
+  );
+  const letter = (stale: boolean) => ({
+    $set: { letter: { text, generatedAt: new Date(), status: 'ready', stale }, 'timings.letterMs': Date.now() - started, 'models.letter': model },
+  });
+  // If the findings changed while the letter was being drafted, save it but mark it out of date.
+  const saved = await Bill.updateOne({ _id: billId, ...atVersion('findingsVersion', findingsVersion) }, letter(false));
+  if (saved.matchedCount === 0) await Bill.updateOne({ _id: billId }, letter(true));
 }
 
 export function registerProcessors(llm: LlmProvider) {
@@ -276,4 +348,5 @@ export function registerProcessors(llm: LlmProvider) {
   agenda.define<BillJobData>(JOBS.extract, { concurrency: 2 }, withRetries(JOBS.extract, (id) => extractBill(id, llm)));
   agenda.define<BillJobData>(JOBS.extractEob, { concurrency: 2 }, withRetries(JOBS.extractEob, (id, data) => extractEob(id, data.eobId!, llm)));
   agenda.define<BillJobData>(JOBS.analyze, { concurrency: 5 }, withRetries(JOBS.analyze, (id) => analyzeBill(id)));
+  agenda.define<BillJobData>(JOBS.letter, { concurrency: 1 }, withRetries(JOBS.letter, (id) => draftLetter(id, llm)));
 }

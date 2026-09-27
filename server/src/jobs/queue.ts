@@ -24,6 +24,7 @@ export const JOBS = {
   extract: 'extract-bill',
   extractEob: 'extract-eob',
   analyze: 'analyze-bill',
+  letter: 'draft-letter',
 } as const;
 export type JobName = (typeof JOBS)[keyof typeof JOBS];
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Finding } from '../domain/types';
 
 /** What the model returns for one bill. It never reports confidence scores or coordinates. */
 export const ExtractionSchema = z.object({
@@ -50,7 +51,11 @@ export type EobExtraction = z.infer<typeof EobExtractionSchema>;
 export interface LlmProvider {
   extractBill(pdf: Uint8Array): Promise<LlmResult>;
   extractEob(pdf: Uint8Array): Promise<LlmResult>;
+  draftLetterSections(findings: LetterFinding[], feedback?: string[]): Promise<LlmResult>;
 }
+
+/** A finding plus the bill's descriptions of the lines it covers, so the letter can name services. */
+export type LetterFinding = Finding & { services?: string[]; mustInclude?: string[] };
 
 /** The model's parsed JSON (validated by the caller) and which model produced it. */
 export interface LlmResult {
