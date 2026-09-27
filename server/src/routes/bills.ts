@@ -24,7 +24,7 @@ function findOwnedBill(req: Request) {
 
 billsRouter.get('/', async (req, res) => {
   const bills = await Bill.find({ userId: userId(req) })
-    .select('status billType displayName originalFilename providerName totals fileDeleted createdAt')
+    .select('status billType displayName originalFilename providerName totals letter.status fileDeleted createdAt')
     .sort({ createdAt: -1 })
     .lean();
   res.json(bills);
@@ -53,7 +53,7 @@ billsRouter.post('/:id/uploaded', async (req, res) => {
   res.status(202).json({ status: 'queued' });
 });
 
-// Polled by the frontend for status, line items, and findings.
+// Polled by the frontend for status, line items, findings, and the letter.
 billsRouter.get('/:id', async (req, res) => {
   const bill = await findOwnedBill(req)?.lean();
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
@@ -122,6 +122,27 @@ billsRouter.patch('/:id/name', async (req, res) => {
   bill.displayName = parsed.data.name || undefined;
   await bill.save();
   res.json({ displayName: bill.displayName ?? null });
+});
+
+billsRouter.post('/:id/letter', async (req, res) => {
+  const bill = await findOwnedBill(req);
+  if (!bill) return res.status(404).json({ error: 'Bill not found' });
+  if (bill.status !== 'complete') return res.status(409).json({ error: 'The audit has not finished yet' });
+  if (!bill.findings.some((f) => f.category !== 'info')) return res.status(409).json({ error: 'There are no findings to dispute' });
+  bill.set('letter', { status: 'drafting' });
+  await bill.save();
+  await enqueue(JOBS.letter, bill.id);
+  res.status(202).json({ status: 'drafting' });
+});
+
+billsRouter.put('/:id/letter', async (req, res) => {
+  const parsed = z.object({ text: z.string().min(1).max(20_000) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Letter text is required' });
+  const bill = await findOwnedBill(req);
+  if (!bill?.letter?.text) return res.status(404).json({ error: 'Letter not found' });
+  bill.set('letter.text', parsed.data.text);
+  await bill.save();
+  res.json({ ok: true });
 });
 
 // ---------- Insurance statements (Explanations of Benefits) ----------

@@ -127,6 +127,8 @@ describe('bill ownership', () => {
       bob.get(`/bills/${id}`),
       bob.post(`/bills/${id}/uploaded`),
       bob.put(`/bills/${id}/review`).send({ admissionAnswer: 'unsure', lineItems: [] }),
+      bob.post(`/bills/${id}/letter`),
+      bob.put(`/bills/${id}/letter`).send({ text: 'hijacked' }),
       bob.post(`/bills/${id}/eobs`).send({ filename: 'eob.pdf' }),
       bob.patch(`/bills/${id}/name`).send({ name: 'Renamed by Bob' }),
       bob.delete(`/bills/${id}`),
@@ -137,6 +139,7 @@ describe('bill ownership', () => {
     const bill = await Bill.findById(id).lean();
     expect(bill).not.toBeNull();
     expect(bill!.status).toBe('complete');
+    expect(bill!.letter?.text).toBeUndefined();
   });
 
   it("keeps insurance statements private to the bill's owner", async () => {

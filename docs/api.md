@@ -13,8 +13,10 @@ All `/bills` routes require the session cookie, and every query filters by the s
 | GET | `/bills` | dashboard list |
 | POST | `/bills` | create bill, returns presigned upload URL |
 | POST | `/bills/:id/uploaded` | queue extraction |
-| GET | `/bills/:id` | status, line items, findings (polled) |
+| GET | `/bills/:id` | status, line items, findings, letter (polled) |
 | PUT | `/bills/:id/review` | confirm items and admission answer, queue audit |
+| POST | `/bills/:id/letter` | queue letter drafting |
+| PUT | `/bills/:id/letter` | save patient edits |
 | DELETE | `/bills/:id` | delete bill and its files |
 | POST | `/bills/:id/eobs` | add an insurance statement, returns presigned upload URL |
 | POST | `/bills/:id/eobs/:eobId/uploaded` | queue statement extraction |
