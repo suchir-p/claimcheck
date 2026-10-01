@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Bill, Finding } from '../api';
 import { BILL_TYPE_LABEL, CHECK_LABEL, money, shortDate } from '../lib';
 import InsurancePanel from './InsurancePanel';
+import LetterPanel from './LetterPanel';
 
 export default function ResultsView({ bill, onChange }: { bill: Bill; onChange: () => void }) {
   const totals = bill.totals ?? { billed: 0, billingErrors: 0, pricingConcerns: 0 };
@@ -102,6 +103,7 @@ export default function ResultsView({ bill, onChange }: { bill: Bill; onChange: 
 
       <InsurancePanel bill={bill} onChange={onChange} />
       <ChecksSummary bill={bill} />
+      {disputable.length > 0 && <LetterPanel bill={bill} onChange={onChange} />}
     </section>
   );
 }

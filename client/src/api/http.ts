@@ -54,6 +54,8 @@ export const httpApi: Api = {
   getBill: (id) => request<Bill>(`/bills/${id}`),
   retryBill: (id) => request(`/bills/${id}/uploaded`, json('POST')),
   submitReview: (id, payload) => request(`/bills/${id}/review`, json('PUT', payload)),
+  requestLetter: (id) => request(`/bills/${id}/letter`, json('POST')),
+  saveLetter: (id, text) => request(`/bills/${id}/letter`, json('PUT', { text })),
   deleteBill: (id) => request(`/bills/${id}`, { method: 'DELETE' }),
   renameBill: (id, name) => request(`/bills/${id}/name`, json('PATCH', { name })),
 

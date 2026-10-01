@@ -49,7 +49,8 @@ export interface BillSummary {
   providerName?: string;
   totals?: { billed: number; billingErrors: number; pricingConcerns: number; insuranceIssues?: number };
   /** Set while every AI model is busy: when each step's next automatic attempt happens. */
-  retryAt?: { extract?: string };
+  retryAt?: { extract?: string; letter?: string };
+  letter?: { status: 'none' | 'drafting' | 'ready' | 'failed' };
   fileDeleted?: boolean;
   createdAt: string;
 }
@@ -105,6 +106,7 @@ export interface Bill extends BillSummary {
   checksRun?: string[];
   checksSkipped?: { checkId: string; reason: string }[];
   benchmarkMultiplier?: number;
+  letter?: { status: 'none' | 'drafting' | 'ready' | 'failed'; text?: string; generatedAt?: string; stale?: boolean };
   error?: string;
 }
 
@@ -128,6 +130,8 @@ export interface Api {
   getBill(id: string): Promise<Bill>;
   retryBill(id: string): Promise<void>;
   submitReview(id: string, payload: ReviewPayload): Promise<void>;
+  requestLetter(id: string): Promise<void>;
+  saveLetter(id: string, text: string): Promise<void>;
   deleteBill(id: string): Promise<void>;
   renameBill(id: string, name: string): Promise<void>;
   uploadEob(billId: string, file: File): Promise<void>;

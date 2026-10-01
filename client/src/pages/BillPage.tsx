@@ -13,6 +13,7 @@ const isWorking = (b?: Bill) =>
   !b ||
   b.status === 'pending' ||
   ['extracting', 'analyzing'].includes(b.status) ||
+  b.letter?.status === 'drafting' ||
   !!b.eobs?.some((e) => e.status === 'pending' || e.status === 'extracting');
 
 export default function BillPage() {
@@ -24,7 +25,7 @@ export default function BillPage() {
   if (!bill) return null;
 
   async function remove() {
-    if (!confirm('Delete this bill and its results? This can’t be undone.')) return;
+    if (!confirm('Delete this bill, its results, and its letter? This can’t be undone.')) return;
     await api.deleteBill(bill!._id);
     navigate('/');
   }
