@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { api } from '../api';
+import { api, isDemo } from '../api';
 import { useSession } from '../App';
 
 export default function AuthPage() {
   const { setUser } = useSession();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(isDemo ? 'demo@claimcheck.app' : '');
+  const [password, setPassword] = useState(isDemo ? 'demo-password' : '');
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 

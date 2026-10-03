@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, type BillSummary } from '../api';
+import { api, isDemo, type BillSummary } from '../api';
 import { useSession } from '../App';
 import { billTitle, money, usePolling } from '../lib';
 
@@ -45,8 +45,19 @@ export default function Dashboard() {
       <div className="dashboard-head">
         <div>
           <h1>{firstName ? `Hi, ${firstName}!` : 'Welcome back!'}</h1>
-          <p className="greeting-sub">Upload an itemized bill, or pick up where you left off.</p>
+          <p className="greeting-sub">{isDemo ? 'Audit a sample bill to see how ClaimCheck works.' : 'Upload an itemized bill, or pick up where you left off.'}</p>
         </div>
+        {isDemo ? (
+          <div className="upload">
+            <button className="primary" onClick={() => upload(new File([], 'sample-itemized-bill.pdf', { type: 'application/pdf' }))} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Audit the sample bill'}
+            </button>
+            <p className="hint">
+              Uploads are turned off in this demo, so you'll audit a sample bill.{' '}
+              <a href="/samples/sample-itemized-bill.pdf" target="_blank" rel="noreferrer">View the bill (PDF)</a>
+            </p>
+          </div>
+        ) : (
         <div className="upload">
           <input ref={input} type="file" accept="application/pdf" hidden onChange={(e) => upload(e.target.files?.[0])} />
           <button className="primary" onClick={() => input.current?.click()} disabled={uploading}>
@@ -55,6 +66,7 @@ export default function Dashboard() {
           <p className="hint">An itemized bill as a PDF. Ask the billing office for one that lists every charge with its code.</p>
           {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
         </div>
+        )}
       </div>
 
       <h2 className="list-heading">Your bills</h2>
@@ -70,7 +82,7 @@ export default function Dashboard() {
             <li key={b._id}>
               <Link to={`/bills/${b._id}`} className="bill-row">
                 <span className="bill-name">{billTitle(b)}</span>
-                <span className={`status status-${b.status}`}>{STATUS_TEXT[b.status]}</span>
+                <span className={`status status-${b.status}`}>{isDemo && b.status === 'pending' ? 'Uploaded' : STATUS_TEXT[b.status]}</span>
                 <span className="bill-meta">
                   Uploaded {new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>

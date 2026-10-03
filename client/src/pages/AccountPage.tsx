@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { api, isDemo } from '../api';
 import { useSession } from '../App';
 
 type Status = { kind: 'idle' } | { kind: 'busy' } | { kind: 'done'; message: string } | { kind: 'error'; message: string };
@@ -51,6 +51,7 @@ export default function AccountPage() {
         <dt>Email</dt><dd>{user.email}</dd>
         {memberSince && (<><dt>Member since</dt><dd>{memberSince}</dd></>)}
       </dl>
+      {isDemo && <p className="hint">Demo mode: changes last until you reload the page. The demo password is "demo-password".</p>}
 
       <NameForm initial={user.name} onSaved={setUser} />
       <EmailForm current={user.email} onSaved={setUser} />

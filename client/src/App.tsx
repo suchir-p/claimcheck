@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { api, type User } from './api';
+import { api, isDemo, type User } from './api';
 import AccountPage from './pages/AccountPage';
 import AuthPage from './pages/AuthPage';
 import BillPage from './pages/BillPage';
@@ -51,6 +51,7 @@ function Header() {
         </svg>
         ClaimCheck
       </Link>
+      {isDemo && <span className="demo-tag">Demo with a sample bill</span>}
       {user && (
         <nav className="masthead-nav" aria-label="Account">
           <NavLink to="/account" className="nav-link">Account</NavLink>
