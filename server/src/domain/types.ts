@@ -43,7 +43,7 @@ export interface FeeScheduleRate {
   rate?: number;
   /** OPPS: packaged into another service, no separate payment */
   packaged?: boolean;
-  version: string; // e.g. "PFS 2026 Jan (RVU26A)"
+  version: string; // e.g. "PFS 2026 Oct (RVU26D)"
 }
 
 /** NCCI edits come in two versions: practitioner (doctor) and hospital (outpatient). */

@@ -2,10 +2,10 @@
  * Loads NCCI procedure-to-procedure edits and MUE limits into MongoDB.
  *
  *   npm run import:rules -- \
- *     --ncci-practitioner 'data/ncci/ccipra-*-f*.txt' --ncci-hospital 'data/ncci/ccioph-*-f*.txt' \
- *     --mue-practitioner data/ncci/MCR_MUE_PractitionerServices_Eff_01-01-2026.csv \
- *     --mue-hospital data/ncci/MCR_MUE_OutpatientHospitalServices_Eff_01-01-2026.csv \
- *     [--data-version "NCCI 2026 Q1"] [--since 2024-01-01] [--dry-run]
+ *     --ncci-practitioner 'data/ncci/ccipra-v323r0-f*.txt' --ncci-hospital 'data/ncci/ccioph-v323r0-f*.txt' \
+ *     --mue-practitioner data/ncci/MCR_MUE_PractitionerServices_Eff_10-01-2026.csv \
+ *     --mue-hospital data/ncci/MCR_MUE_OutpatientHospitalServices_Eff_10-01-2026.csv \
+ *     [--data-version "NCCI 2026 Q4"] [--since 2024-01-01] [--dry-run]
  *
  * Pass several files for one option by repeating it or using a quoted glob.
  * Each run replaces that version's rows, so re-importing a new quarter never leaves stale edits.
@@ -53,7 +53,7 @@ async function main() {
       'ncci-hospital': { type: 'string', multiple: true },
       'mue-practitioner': { type: 'string' },
       'mue-hospital': { type: 'string' },
-      'data-version': { type: 'string', default: 'NCCI 2026 Q1' },
+      'data-version': { type: 'string', default: 'NCCI 2026 Q4' },
       since: { type: 'string', default: '2024-01-01' },
       'dry-run': { type: 'boolean', default: false },
     },

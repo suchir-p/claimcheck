@@ -2,7 +2,7 @@
  * Loads the three Medicare fee schedules into MongoDB.
  *
  *   npm run import:fees -- --pfs <PPRRVU nonQPP.csv> --opps <Addendum B.csv> --clfs <CLFS.csv> \
- *     --pfs-version "PFS 2026 Jan (RVU26A)" --opps-version "OPPS 2026 Jan" --clfs-version "CLFS 2026 Q1" [--dry-run]
+ *     --pfs-version "PFS 2026 Oct (RVU26D)" --opps-version "OPPS 2026 Jul" --clfs-version "CLFS 2026 Q4" [--dry-run]
  *
  * Rows are streamed and written with unordered bulk upserts in batches, so memory stays flat.
  * --dry-run parses and counts without touching the database.
@@ -51,9 +51,9 @@ async function main() {
   const { values } = parseArgs({
     options: {
       pfs: { type: 'string' }, opps: { type: 'string' }, clfs: { type: 'string' },
-      'pfs-version': { type: 'string', default: 'PFS 2026 Jan (RVU26A)' },
-      'opps-version': { type: 'string', default: 'OPPS 2026 Jan' },
-      'clfs-version': { type: 'string', default: 'CLFS 2026 Q1' },
+      'pfs-version': { type: 'string', default: 'PFS 2026 Oct (RVU26D)' },
+      'opps-version': { type: 'string', default: 'OPPS 2026 Jul' },
+      'clfs-version': { type: 'string', default: 'CLFS 2026 Q4' },
       'dry-run': { type: 'boolean', default: false },
     },
   });
