@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 /** Flash models only, best first. Each has its own free-tier quota, so falling back also spreads the load. */
-const DEFAULT_GEMINI_MODELS = ['gemini-3-flash-preview', 'gemini-2.5-flash'];
+const DEFAULT_GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
 
 const MODEL_ID_RE = /^[a-z0-9][a-z0-9.-]*$/i;
 
@@ -10,7 +10,7 @@ export function parseGeminiModels(raw: string | undefined): string[] {
   const models = (raw ?? '').split(',').map((m) => m.trim().replace(/^models\//, '')).filter(Boolean);
   // Catch a pasted-together .env line (GEMINI_MODEL=GEMINI_MODELS=...) at startup, not on the first bill.
   const bad = models.filter((m) => !MODEL_ID_RE.test(m));
-  if (bad.length) throw new Error(`Invalid Gemini model name(s) in .env: ${bad.map((m) => `"${m}"`).join(', ')}. Expected IDs like gemini-3-flash-preview, separated by commas.`);
+  if (bad.length) throw new Error(`Invalid Gemini model name(s) in .env: ${bad.map((m) => `"${m}"`).join(', ')}. Expected IDs like gemini-3.8-flash, separated by commas.`);
   return models.length ? [...new Set(models)] : DEFAULT_GEMINI_MODELS;
 }
 

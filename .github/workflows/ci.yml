@@ -8,7 +8,7 @@ jobs:
         working-directory: server
     strategy:
       matrix:
-        node: [22, 24]
+        node: [22, 26]
     # A real MongoDB for the API integration tests (auth, sessions, bill ownership).
     services:
       mongo:
